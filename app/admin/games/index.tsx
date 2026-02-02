@@ -133,7 +133,7 @@ export default function GamesList() {
                                     <Text style={[styles.td, { flex: 1.5 }]}>{game.date} {game.time}</Text>
                                     <Text style={[styles.td, { flex: 2 }]}>{awayName} vs {homeName}</Text>
                                     <Text style={[styles.td, { flex: 2 }]}>{game.stadium}</Text>
-                                    <View style={[styles.td, { flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }]}>
+                                    <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
                                         <TouchableOpacity onPress={() => router.push(`/admin/games/${game.id}`)}>
                                             <Text style={styles.actionText}>Edit</Text>
                                         </TouchableOpacity>

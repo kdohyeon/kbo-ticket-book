@@ -50,7 +50,7 @@ function AppLayoutNav() {
         // if we are at /onboarding, segments might be ['(app)', 'onboarding']
 
         // Let's print segments to debug if needed, but safe check:
-        const isOnboardingRoute = segments.includes('onboarding');
+        const isOnboardingRoute = (segments as string[]).includes('onboarding');
 
         // If we are at root or something else?
 
