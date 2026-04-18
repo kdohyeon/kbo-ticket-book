@@ -5,7 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { auth } from '@/src/config/firebase';
-import { signInAnonymously } from 'firebase/auth';
+import { User } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { FilterProvider } from '../../context/FilterContext';
@@ -18,20 +18,15 @@ export const unstable_settings = {
 function AppLayoutNav() {
     const colorScheme = useColorScheme();
     const [authInitializing, setAuthInitializing] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
     const { selectedTeam, isLoading: themeLoading } = useTheme();
     const router = useRouter();
     const segments = useSegments();
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                setAuthInitializing(false);
-            } else {
-                signInAnonymously(auth).catch((error) => {
-                    console.error('Anonymous auth failed', error);
-                    setAuthInitializing(false);
-                });
-            }
+        const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+            setUser(firebaseUser);
+            setAuthInitializing(false);
         });
         return unsubscribe;
     }, []);
@@ -39,30 +34,23 @@ function AppLayoutNav() {
     useEffect(() => {
         if (authInitializing || themeLoading) return;
 
-        const inOnboarding = segments[0] === 'onboarding';
+        const segs = segments as string[];
+        const isLoginRoute = segs.includes('login');
+        const isOnboardingRoute = segs.includes('onboarding');
 
-        // Adjusted logic for nested route
-        // If inside (app), segments might process differently?
-        // Actually, creating (app) group does not change URL segments drastically if handled correctly,
-        // but typically it does.
-        // However, since we are moving files, 'onboarding' will be '(app)/onboarding'.
-        // useSegments() returns array of segments.
-        // if we are at /onboarding, segments might be ['(app)', 'onboarding']
-
-        // Let's print segments to debug if needed, but safe check:
-        const isOnboardingRoute = (segments as string[]).includes('onboarding');
-
-        // If we are at root or something else?
+        if (!user) {
+            if (!isLoginRoute) router.replace('/(app)/login');
+            return;
+        }
 
         if (!selectedTeam && !isOnboardingRoute) {
-            // Need to ensure we replace to the correct relative or absolute path
-            // router.replace('/onboarding') should work if onboarding is in (app) and (app) is default?
-            // Actually if (app) is a group, '/onboarding' resolves to 'app/(app)/onboarding'.
             router.replace('/(app)/onboarding');
         } else if (selectedTeam && isOnboardingRoute) {
             router.replace('/(app)/(tabs)');
+        } else if (selectedTeam && isLoginRoute) {
+            router.replace('/(app)/(tabs)');
         }
-    }, [authInitializing, themeLoading, selectedTeam, segments]);
+    }, [authInitializing, themeLoading, user, selectedTeam, segments]);
 
     if (authInitializing || themeLoading) {
         return (
@@ -76,6 +64,7 @@ function AppLayoutNav() {
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false }} />
                 <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                 <Stack.Screen name="record/[id]" options={{ presentation: 'card', title: '상세 기록' }} />
