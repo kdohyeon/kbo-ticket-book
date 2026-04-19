@@ -6,7 +6,7 @@ import { auth, db } from '@/src/config/firebase';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { addDoc, collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -128,36 +128,6 @@ export default function ScheduleScreen() {
         }
     };
 
-    // Temporary function to seed data for testing
-    const seedData = async () => {
-        try {
-            const dummyGames = [
-                // 2024 Data
-                { date: '2024-04-01', time: '18:30', homeTeamId: 'hanwha', awayTeamId: 'lg', stadium: '한화생명 이글스파크', status: 'scheduled' },
-                // 2025 Data
-                { date: '2025-05-05', time: '14:00', homeTeamId: 'doosan', awayTeamId: 'lg', stadium: '잠실 야구장', status: 'scheduled' },
-                { date: '2025-06-12', time: '18:30', homeTeamId: 'samsung', awayTeamId: 'kia', stadium: '대구 삼성 라이온즈 파크', status: 'scheduled' },
-                // 2026 Data
-                { date: '2026-03-23', time: '14:00', homeTeamId: 'lotte', awayTeamId: 'nc', stadium: '사직 야구장', status: 'scheduled' },
-                { date: '2026-07-15', time: '18:30', homeTeamId: 'kt', awayTeamId: 'ssg', stadium: '수원 KT 위즈 파크', status: 'scheduled' },
-            ];
-
-            for (const game of dummyGames) {
-                // Check if already exists to avoid dupes in test
-                const q = query(collection(db, 'games'), where('date', '==', game.date), where('homeTeamId', '==', game.homeTeamId));
-                const snap = await getDocs(q);
-                if (snap.empty) {
-                    await addDoc(collection(db, 'games'), game);
-                }
-            }
-            Alert.alert('성공', '2024, 2025, 2026 테스트 데이터가 추가되었습니다.');
-            fetchGames();
-        } catch (e) {
-            console.error(e);
-            Alert.alert('오류', '데이터 추가 실패');
-        }
-    };
-
     const getTeamInfo = (id: string) => TEAMS.find((t) => t.id === id);
 
     const groupGamesByDate = (games: Game[]) => {
@@ -256,10 +226,6 @@ export default function ScheduleScreen() {
                     <Text style={[styles.title, { color: primaryColor }]}>{selectedYear}년</Text>
                 </View>
 
-                {/* Dev only button */}
-                <TouchableOpacity onPress={seedData} style={styles.seedButton}>
-                    <Text style={styles.seedButtonText}>+ Test Data</Text>
-                </TouchableOpacity>
             </View>
 
             {loading ? (
@@ -333,9 +299,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
     },
     yearContainer: {
         flexDirection: 'row',
@@ -344,15 +307,6 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: '800',
-    },
-    seedButton: {
-        padding: 5,
-        backgroundColor: '#eee',
-        borderRadius: 5,
-    },
-    seedButtonText: {
-        fontSize: 10,
-        color: '#666',
     },
     loadingContainer: {
         flex: 1,
