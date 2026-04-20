@@ -58,6 +58,7 @@ export default function NewRecordScreen() {
   // Track if data was auto-filled
   const [isAutoFilled, setIsAutoFilled] = useState(false);
   const [recordedGames, setRecordedGames] = useState<Set<string>>(new Set());
+  const [fieldErrors, setFieldErrors] = useState<{ score?: string; seat?: string }>({});
   const params = useLocalSearchParams();
 
   const primaryColor = selectedTeam?.primaryColor || '#F37321';
@@ -95,7 +96,6 @@ export default function NewRecordScreen() {
       );
       getDocs(q).then(snapshot => {
         const gameKeys = new Set<string>();
-        // Key format: date (YYYY-MM-DD from formatted string)
         snapshot.forEach(doc => {
           const data = doc.data();
           if (data.date) {
@@ -104,6 +104,8 @@ export default function NewRecordScreen() {
           }
         });
         setRecordedGames(gameKeys);
+      }).catch(error => {
+        console.error('Error fetching recorded games:', error);
       });
     }, [])
   );
@@ -218,11 +220,33 @@ export default function NewRecordScreen() {
     setModalVisible(false);
   };
 
+  const validateForm = (): boolean => {
+    const errors: { score?: string; seat?: string } = {};
+
+    if (homeScore !== '' || awayScore !== '') {
+      const h = Number(homeScore);
+      const a = Number(awayScore);
+      const invalid = (v: number) => isNaN(v) || !Number.isInteger(v) || v < 0 || v > 99;
+      if (invalid(h) || invalid(a)) {
+        errors.score = '스코어는 0~99 사이의 정수여야 합니다.';
+      }
+    }
+
+    if (seat.length > 100) {
+      errors.seat = `좌석 정보는 100자 이내로 입력해주세요. (현재 ${seat.length}자)`;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async () => {
     if (!formattedDate || !homeTeam || !awayTeam || !stadium) {
       Alert.alert('알림', '필수 항목(날짜, 팀, 경기장)이 누락되었습니다.');
       return;
     }
+
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
@@ -380,27 +404,30 @@ export default function NewRecordScreen() {
                 <View style={styles.scoreInputWrapper}>
                   <Text style={styles.scoreLabel}>원정</Text>
                   <TextInput
-                    style={[styles.input, styles.scoreInput, isAutoFilled && styles.readOnlyInput]}
+                    style={[styles.input, styles.scoreInput, isAutoFilled && styles.readOnlyInput, fieldErrors.score && styles.inputError]}
                     placeholder="0"
                     value={awayScore}
-                    onChangeText={setAwayScore}
+                    onChangeText={(v) => { setAwayScore(v); setFieldErrors(e => ({ ...e, score: undefined })); }}
                     keyboardType="number-pad"
                     editable={!isAutoFilled}
+                    maxLength={2}
                   />
                 </View>
                 <Text style={styles.scoreSeparator}>:</Text>
                 <View style={styles.scoreInputWrapper}>
                   <Text style={styles.scoreLabel}>홈</Text>
                   <TextInput
-                    style={[styles.input, styles.scoreInput, isAutoFilled && styles.readOnlyInput]}
+                    style={[styles.input, styles.scoreInput, isAutoFilled && styles.readOnlyInput, fieldErrors.score && styles.inputError]}
                     placeholder="0"
                     value={homeScore}
-                    onChangeText={setHomeScore}
+                    onChangeText={(v) => { setHomeScore(v); setFieldErrors(e => ({ ...e, score: undefined })); }}
                     keyboardType="number-pad"
                     editable={!isAutoFilled}
+                    maxLength={2}
                   />
                 </View>
               </View>
+              {fieldErrors.score && <Text style={styles.errorText}>{fieldErrors.score}</Text>}
             </View>
 
             <View style={styles.formGroup}>
@@ -434,12 +461,17 @@ export default function NewRecordScreen() {
             <View style={styles.formGroup}>
               <Text style={styles.label}>좌석 (직접 입력)</Text>
               <TextInput
-                style={[styles.input, styles.activeInput]}
+                style={[styles.input, styles.activeInput, fieldErrors.seat && styles.inputError]}
                 placeholder="예: 1루 응원석 105구역"
                 value={seat}
-                onChangeText={setSeat}
+                onChangeText={(v) => { setSeat(v); setFieldErrors(e => ({ ...e, seat: undefined })); }}
                 autoFocus={isAutoFilled}
+                maxLength={100}
               />
+              {fieldErrors.seat
+                ? <Text style={styles.errorText}>{fieldErrors.seat}</Text>
+                : <Text style={styles.charCount}>{seat.length}/100</Text>
+              }
             </View>
 
             <TouchableOpacity
@@ -551,6 +583,20 @@ const styles = StyleSheet.create({
   activeInput: {
     borderColor: '#333',
     borderWidth: 1.5,
+  },
+  inputError: {
+    borderColor: '#D32F2F',
+  },
+  errorText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#D32F2F',
+  },
+  charCount: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#bbb',
+    textAlign: 'right',
   },
   scoreContainer: {
     flexDirection: 'row',

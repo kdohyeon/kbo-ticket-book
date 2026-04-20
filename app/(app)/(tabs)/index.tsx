@@ -68,36 +68,20 @@ export default function HomeScreen() {
         ...(doc.data() as Omit<TicketRecord, 'id'>),
       }));
 
-      // Extract Years
-      const uniqueYears = Array.from(new Set(records.map(r => {
-        if (r.date.includes('-')) return r.date.split('-')[0];
-        // Fallback to current year if date string is weird or missing year
-        return new Date().getFullYear().toString();
-      }))).sort((a, b) => b.localeCompare(a)); // Sort years descending
+      const uniqueYears = Array.from(
+        new Set(records.map(r =>
+          r.date.includes('-') ? r.date.split('-')[0] : new Date().getFullYear().toString()
+        ))
+      ).sort((a, b) => b.localeCompare(a));
 
       setYears(uniqueYears);
-      setYears(uniqueYears);
-      // Only set initial year if context has default (current year) but data might have differing range?
-      // Actually FilterContext defaults to new Date().getFullYear().
-      // If we want to auto-select the latest available year from data if different:
-      if (uniqueYears.length > 0) {
-        // Check if currently selected year is in available years, if not, select latest?
-        // For now, let's keep the user's selection unless it's invalid, or just respect context.
-        // But the original logic forced selection.
-        // Let's just update the list. The context has default.
-      }
-
-      // Original logic was: if !selectedYear set to latest.
-      // Context always has selectedYear.
-      // So we might want to sync if the context year implies "no selection" or if we want to enforce valid year.
-      // But typically context prevails. We can skip forcing selection here unless we want to "reset" on fresh load.
-      // Let's remove the auto-selection logic that overrides context, or maybe only if context is 0? Context default is current year.
-
-      // Let's just set tickets.
-
-
       setTickets(records);
       setLoading(false);
+
+      // 현재 선택 연도가 실제 데이터에 없으면 가장 최근 연도로 자동 보정
+      if (uniqueYears.length > 0 && !uniqueYears.includes(selectedYear.toString())) {
+        setSelectedYear(parseInt(uniqueYears[0]));
+      }
     });
 
     return () => unsubscribe();
@@ -165,10 +149,9 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.yearSelector}
             onPress={() => {
+              const options = years.length > 0 ? years : [new Date().getFullYear().toString()];
               Alert.alert('연도 선택', '', [
-                { text: '2026', onPress: () => setSelectedYear(2026) },
-                { text: '2025', onPress: () => setSelectedYear(2025) },
-                { text: '2024', onPress: () => setSelectedYear(2024) },
+                ...options.map(y => ({ text: `${y}년`, onPress: () => setSelectedYear(parseInt(y)) })),
                 { text: '취소', style: 'cancel' }
               ]);
             }}

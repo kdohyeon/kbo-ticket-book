@@ -39,6 +39,7 @@ export default function TicketDetailScreen() {
 
     const [ticket, setTicket] = useState<TicketRecord | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isError, setIsError] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
 
     // Edited State
@@ -54,8 +55,13 @@ export default function TicketDetailScreen() {
     }, [id]);
 
     const fetchTicket = async () => {
-        if (!id || typeof id !== 'string') return;
+        if (!id || typeof id !== 'string') {
+            setIsError(true);
+            setLoading(false);
+            return;
+        }
         setLoading(true);
+        setIsError(false);
         try {
             const docRef = doc(db, 'records', id);
             const docSnap = await getDoc(docRef);
@@ -64,14 +70,15 @@ export default function TicketDetailScreen() {
                 const data = docSnap.data() as Omit<TicketRecord, 'id'>;
                 setTicket({ id: docSnap.id, ...data });
                 setEditedSeat(data.seat);
-                setEditedSide(data.myTeamSide || 'HOME'); // Default to HOME if missing
+                setEditedSide(data.myTeamSide || 'HOME');
             } else {
-                Alert.alert('오류', '기록을 찾을 수 없습니다.');
-                router.back();
+                Alert.alert('오류', '기록을 찾을 수 없습니다.', [
+                    { text: '확인', onPress: () => router.back() },
+                ]);
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('오류', '기록을 불러오는데 실패했습니다.');
+            setIsError(true);
         } finally {
             setLoading(false);
         }
@@ -177,12 +184,35 @@ export default function TicketDetailScreen() {
         return { away: '0', home: '0' };
     }
 
-    if (loading || !ticket) {
+    if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={primaryColor} />
             </View>
-        )
+        );
+    }
+
+    if (isError || !ticket) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <IconSymbol name="chevron.left" size={28} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>상세 기록</Text>
+                    <View style={{ width: 28 }} />
+                </View>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>기록을 불러오지 못했습니다.</Text>
+                    <TouchableOpacity style={[styles.retryButton, { borderColor: primaryColor }]} onPress={fetchTicket}>
+                        <Text style={[styles.retryButtonText, { color: primaryColor }]}>다시 시도</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.back()}>
+                        <Text style={styles.backText}>돌아가기</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
     }
 
     const { away: awayName, home: homeName } = getTeams(ticket.matchup);
@@ -352,6 +382,30 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 16,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    retryButton: {
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    retryButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    backText: {
+        fontSize: 14,
+        color: '#999',
     },
     header: {
         flexDirection: 'row',

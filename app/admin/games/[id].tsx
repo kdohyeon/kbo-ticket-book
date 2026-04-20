@@ -26,6 +26,7 @@ export default function GameForm() {
 
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(!isNew);
+    const [isError, setIsError] = useState(false);
 
     const [date, setDate] = useState('');     // YYYY-MM-DD
     const [time, setTime] = useState('18:30');
@@ -43,6 +44,7 @@ export default function GameForm() {
     }, [id]);
 
     const fetchGame = async (gameId: string) => {
+        setIsError(false);
         try {
             const docRef = doc(db, 'games', gameId);
             const snap = await getDoc(docRef);
@@ -56,12 +58,13 @@ export default function GameForm() {
                 if (data.homeScore !== undefined) setHomeScore(data.homeScore.toString());
                 if (data.awayScore !== undefined) setAwayScore(data.awayScore.toString());
             } else {
-                Alert.alert('오류', '경기를 찾을 수 없습니다.');
-                router.back();
+                Alert.alert('오류', '경기를 찾을 수 없습니다.', [
+                    { text: '확인', onPress: () => router.back() },
+                ]);
             }
         } catch (e) {
             console.error(e);
-            Alert.alert('오류', '데이터 로드 실패');
+            setIsError(true);
         } finally {
             setInitialLoading(false);
         }
@@ -148,6 +151,20 @@ export default function GameForm() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" />
+            </View>
+        );
+    }
+
+    if (isError) {
+        return (
+            <View style={styles.loadingContainer}>
+                <Text style={styles.errorText}>데이터를 불러오지 못했습니다.</Text>
+                <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() => { setInitialLoading(true); fetchGame(id as string); }}
+                >
+                    <Text style={styles.retryButtonText}>다시 시도</Text>
+                </TouchableOpacity>
             </View>
         );
     }
@@ -295,6 +312,23 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        gap: 16,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    retryButton: {
+        paddingHorizontal: 24,
+        paddingVertical: 10,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+    },
+    retryButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#007AFF',
     },
     title: {
         fontSize: 24,
